@@ -1,0 +1,24 @@
+[project]
+name = "varphi-python-dap"
+version = "1.0.1"
+description = "An implementation of a Varphi-to-DAP-compliant-Python compiler."
+readme = "README.md"
+authors = [
+    { name = "Hassan El-Sheikha", email = "hmelsheikha@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "varphi-python==2.0.1",
+]
+
+[project.scripts]
+varphi-python-dap = "varphi_python_dap.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "black>=25.12.0",
+]

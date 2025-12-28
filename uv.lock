@@ -194,20 +194,20 @@ wheels = [
 
 [[package]]
 name = "varphi-python"
-version = "2.0.1"
+version = "2.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typer" },
     { name = "varphi-devkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/48/49aee876dacc3c2f4c98e3930b772e27df373755724cae75f66f1183a601/varphi_python-2.0.1.tar.gz", hash = "sha256:deb55d0c9f9cf81678e2e305b3f75f54085dcbbc35f686706539cdc26d94a2c3", size = 5344, upload-time = "2025-12-27T14:24:46.495Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/80/9adae08299ea6cc2ddc90d98daa8e9d2c9dee2000ade1749ac88754ac7a5/varphi_python-2.0.3.tar.gz", hash = "sha256:f50221a8ac61ce8fcee86ecc71734668b3558176fb408898ebd958440e67d425", size = 5293, upload-time = "2025-12-28T22:13:55.201Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/35/40/88fc55d0a2777cc2d56cc934b4822320046e0267251c88bbde925b938dbb/varphi_python-2.0.1-py3-none-any.whl", hash = "sha256:c4f8f2b8a6cd5c31a669415291b7a5b352739352203cb0fe68a123c686c2fd5c", size = 8148, upload-time = "2025-12-27T14:24:45.134Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/f9/c371f81341758f511e4617e609a21137ee160bb797702bac0379254e13ef/varphi_python-2.0.3-py3-none-any.whl", hash = "sha256:d59e25f8059ca2c76ca47c78a3870fbee3935438871adbf2545fa9bf7a613c96", size = 8101, upload-time = "2025-12-28T22:13:53.808Z" },
 ]
 
 [[package]]
 name = "varphi-python-dap"
-version = "1.0.0"
+version = "1.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "varphi-python" },
@@ -219,7 +219,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "varphi-python", specifier = "==2.0.1" }]
+requires-dist = [{ name = "varphi-python", specifier = "==2.0.3" }]
 
 [package.metadata.requires-dev]
 dev = [{ name = "black", specifier = ">=25.12.0" }]

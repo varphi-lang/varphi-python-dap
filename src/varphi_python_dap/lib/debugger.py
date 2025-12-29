@@ -11,6 +11,7 @@ from varphi_devkit import BLANK
 
 
 class DAPStdout(io.TextIOBase):
+    """Redirects stdout to the VS Code Debug Console (Output category)."""
     server: DAPServer
     buffer: io.StringIO
 
@@ -21,6 +22,21 @@ class DAPStdout(io.TextIOBase):
     def write(self, s: str):
         if self.server:
             self.server._send_event("output", {"category": "stdout", "output": s})
+        return len(s)
+
+
+class DAPStderr(io.TextIOBase):
+    """Redirects stderr to the VS Code Debug Console (Stderr category, usually red)."""
+    server: DAPServer
+    buffer: io.StringIO
+
+    def __init__(self, server_instance):
+        self.server = server_instance
+        self.buffer = io.StringIO()
+
+    def write(self, s: str):
+        if self.server:
+            self.server._send_event("output", {"category": "stderr", "output": s})
         return len(s)
 
 
@@ -46,7 +62,7 @@ class DAPServer:
         self.original_source_path = os.path.abspath(original_source_path)
         self._write_lock = threading.Lock()
 
-        tapes = tuple(Tape(list(t)) for t in input_tapes)
+        tapes = tuple(Tape(t) for t in input_tapes)
         self.tm = TuringMachine(k, tapes, initial_state)
 
         self.breakpoints = {}
@@ -56,13 +72,19 @@ class DAPServer:
 
         self.input_queue = queue.Queue()
 
-        # Redirect stdout to DAP console
+        # Redirect stdout and stderr to DAP console
         sys.stdout = DAPStdout(self)
+        sys.stderr = DAPStderr(self)
 
         self.reader_thread = threading.Thread(target=self._read_input_loop, daemon=True)
         self.reader_thread.start()
 
-        self.tm.peek()
+        # Initialize the machine view
+        try:
+            self.tm.peek()
+        except Exception:
+            # If peek fails immediately (e.g. invalid initial state), we catch it later or let it slide
+            pass
 
     def _send_message(self, msg: Dict[str, Any]):
         """Sends a DAP-compliant message to the real stdout."""
@@ -71,6 +93,7 @@ class DAPServer:
             msg["seq"] = self._seq
             json_msg = json.dumps(msg)
             encoded = json_msg.encode("utf-8")
+            # We write to __stdout__ because sys.stdout is redirected
             sys.__stdout__.buffer.write(
                 f"Content-Length: {len(encoded)}\r\n\r\n".encode("utf-8")
             )
@@ -112,13 +135,42 @@ class DAPServer:
             if self.running:
                 self._step_machine()
 
+    def _print_halt_report(self):
+        """Calculates statistics and prints the halt report to the Debug Console."""
+        total_space = sum(h.space_complexity() for h in self.tm.heads)
+        
+        report = []
+        report.append(f"HALTED at state '{self.tm.state.name}'")
+        report.append(f"Time taken: {self.steps_count} steps")
+        report.append(f"Space used: {total_space} cells")
+        report.append(f"Number of tapes: {len(self.tm.heads)}")
+
+        for i, head in enumerate(self.tm.tapes):
+            # Extract tape content from min_index to max_index
+            tape_dict = head.tape._tape
+            if not tape_dict:
+                content = ""
+            else:
+                min_idx = min(tape_dict.keys())
+                max_idx = max(tape_dict.keys())
+                # Construct string, replacing missing spots with BLANK if necessary
+                content = "".join(tape_dict.get(k, BLANK) for k in range(min_idx, max_idx + 1))
+            
+            report.append(f"Tape {i + 1}: {content.strip("_")}")
+
+        # Join with newlines and print. This goes to DAPStdout -> VS Code Debug Console
+        print("\n" + "\n".join(report) + "\n")
+
     def _step_machine(self):
+        # Check termination
         if self.tm._next_instruction is None:
             self.running = False
+            self._print_halt_report()
             self._send_event("terminated")
             self._send_event("exited", {"exitCode": 0})
             return
 
+        # Check breakpoints (unless single-stepping)
         if self.step_granularity != "step":
             current_line = self.tm._next_instruction.line_number
             if self.breakpoints.get(current_line, False):
@@ -129,10 +181,25 @@ class DAPServer:
                 )
                 return
 
-        self.tm.step()
-        self.steps_count += 1
-        has_next = self.tm.peek()
+        # Execute Step (with Error Handling)
+        try:
+            self.tm.step()
+            self.steps_count += 1
+            has_next = self.tm.peek()
+        except Exception as e:
+            self.running = False
+            # Print error to Debug Console (red)
+            sys.stderr.write(f"\nRUNTIME ERROR: {str(e)}\n")
+            # Notify VS Code to pause on exception
+            self._send_event("stopped", {
+                "reason": "exception",
+                "description": "Paused on exception",
+                "text": str(e),
+                "threadId": 1
+            })
+            return
 
+        # Handle Step Pause
         if self.step_granularity == "step":
             self.running = False
             self.step_granularity = None
@@ -184,6 +251,7 @@ class DAPServer:
                 "supportsConfigurationDoneRequest": True,
                 "supportsSetVariable": False,
                 "supportsValueFormattingOptions": False,
+                "supportsExceptionInfoRequest": True,
             },
         )
         self._send_event("initialized")
@@ -253,7 +321,7 @@ class DAPServer:
     def handle_variables(self, req):
         vars_list = []
 
-        # 1. Critical Machine Metrics
+        # Machine Metrics
         vars_list.append(
             {
                 "name": "Current State",
@@ -264,7 +332,7 @@ class DAPServer:
         )
         vars_list.append(
             {
-                "name": "Steps",
+                "name": "Time taken",
                 "value": str(self.steps_count),
                 "type": "integer",
                 "variablesReference": 0,
@@ -274,36 +342,32 @@ class DAPServer:
         total_space = sum(h.space_complexity() for h in self.tm.heads)
         vars_list.append(
             {
-                "name": "Space Complexity",
+                "name": "Space used",
                 "value": str(total_space),
                 "type": "integer",
                 "variablesReference": 0,
             }
         )
 
-        # 2. Tape Visualizations
-        # Appended directly to the same list so they appear in the same section
+        # Tape Visualizations
         for i, head in enumerate(self.tm.heads):
-            try:
-                center = head.index
-                raw_dict = head.tape._tape
+            center = head.index
+            raw_dict = head.tape._tape
 
-                # Using .get() for safe, non-mutating access
-                left_ctx = "".join(
-                    raw_dict.get(x, BLANK) for x in range(center - 5, center)
-                )
-                curr_val = raw_dict.get(center, BLANK)
-                right_ctx = "".join(
-                    raw_dict.get(x, BLANK) for x in range(center + 1, center + 6)
-                )
+            # Using .get() for non-mutating access
+            left_ctx = "".join(
+                raw_dict.get(x, BLANK) for x in range(center - 5, center)
+            )
+            curr_val = raw_dict.get(center, BLANK)
+            right_ctx = "".join(
+                raw_dict.get(x, BLANK) for x in range(center + 1, center + 6)
+            )
 
-                tape_display = f"{left_ctx}[{curr_val}]{right_ctx}"
-            except Exception as e:
-                tape_display = f"<Error: {e}>"
+            tape_display = f"{left_ctx}[{curr_val}]{right_ctx}"
 
             vars_list.append(
                 {
-                    "name": f"Tape {i}",
+                    "name": f"Tape {i + 1}",
                     "value": tape_display,
                     "type": "string",
                     "variablesReference": 0,
@@ -334,3 +398,10 @@ class DAPServer:
         self.running = False
         self._send_response(req, True)
         sys.exit(0)
+
+    def handle_exceptionInfo(self, req):
+        self._send_response(req, True, {
+            "exceptionId": "runtime_error",
+            "description": "An error occurred during execution",
+            "breakMode": "always"
+        })

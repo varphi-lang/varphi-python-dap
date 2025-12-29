@@ -145,9 +145,9 @@ class DAPServer:
         report.append(f"Space used: {total_space} cells")
         report.append(f"Number of tapes: {len(self.tm.heads)}")
 
-        for i, head in enumerate(self.tm.tapes):
+        for i, tape in enumerate(self.tm.tapes):
             # Extract tape content from min_index to max_index
-            tape_dict = head.tape._tape
+            tape_dict = tape._tape
             if not tape_dict:
                 content = ""
             else:

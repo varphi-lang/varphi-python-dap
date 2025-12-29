@@ -1,6 +1,6 @@
 [project]
 name = "varphi-python-dap"
-version = "1.0.3"
+version = "1.0.4"
 description = "An implementation of a Varphi-to-DAP-compliant-Python compiler."
 readme = "README.md"
 authors = [

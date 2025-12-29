@@ -1,0 +1,2 @@
+# The Varphi-to-PythonDAP Compiler
+This is the source code repository for a compiler that converts the [Varphi programming language](https://varphi-lang.com/) into a Debug Adapter Protocol (DAP) debugger written in Python.

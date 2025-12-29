@@ -1,6 +1,6 @@
 [project]
 name = "varphi-python-dap"
-version = "1.0.2"
+version = "1.0.3"
 description = "An implementation of a Varphi-to-DAP-compliant-Python compiler."
 readme = "README.md"
 authors = [
@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "varphi-python==2.0.3",
+    "varphi-python==2.0.4",
 ]
 
 [project.scripts]

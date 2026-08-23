@@ -6,8 +6,8 @@ import queue
 import os
 import io
 from typing import Dict, Any, List, Optional
-from varphi_python.lib import TuringMachine, State, Tape
-from varphi_devkit import BLANK
+from vp2py.lib import TuringMachine, State, Tape
+from varphi_devkit import BuiltinSymbol, Character
 
 
 class DAPStdout(io.TextIOBase):
@@ -48,6 +48,7 @@ class DAPServer:
     steps_count: int
     input_queue: queue.Queue
     original_source_path: str
+    blank_char: str
 
     _seq: int = 0
     _write_lock: threading.Lock
@@ -56,14 +57,26 @@ class DAPServer:
         self,
         k: int,
         initial_state: State,
+        state_registry: dict[str, State],
         input_tapes: List[str],
         original_source_path: str,
+        blank_char: str = "_",
     ):
         self.original_source_path = os.path.abspath(original_source_path)
         self._write_lock = threading.Lock()
+        self.blank_char = blank_char
 
-        tapes = tuple(Tape(t) for t in input_tapes)
-        self.tm = TuringMachine(k, tapes, initial_state)
+        parsed_tapes = []
+        for t_str in input_tapes:
+            parsed_tape = []
+            for char in t_str:
+                if char == self.blank_char:
+                    parsed_tape.append(BuiltinSymbol.BLANK)
+                else:
+                    parsed_tape.append(Character(char))
+            parsed_tapes.append(Tape(parsed_tape))
+
+        self.tm = TuringMachine(k, tuple(parsed_tapes), initial_state, state_registry)
 
         self.breakpoints = {}
         self.running = False
@@ -85,6 +98,9 @@ class DAPServer:
         except Exception:
             # If peek fails immediately (e.g. invalid initial state), we catch it later or let it slide
             pass
+
+    def _format_cell(self, val: Character | BuiltinSymbol) -> str:
+        return self.blank_char if val == BuiltinSymbol.BLANK else val.value
 
     def _send_message(self, msg: Dict[str, Any]):
         """Sends a DAP-compliant message to the real stdout."""
@@ -146,24 +162,22 @@ class DAPServer:
         report.append(f"Number of tapes: {len(self.tm.heads)}")
 
         for i, tape in enumerate(self.tm.tapes):
-            # Extract tape content from min_index to max_index
             tape_dict = tape._tape
             if not tape_dict:
                 content = ""
             else:
                 min_idx = min(tape_dict.keys())
                 max_idx = max(tape_dict.keys())
-                # Construct string, replacing missing spots with BLANK if necessary
-                content = "".join(tape_dict.get(k, BLANK) for k in range(min_idx, max_idx + 1))
+                content = "".join(self._format_cell(tape_dict.get(k, BuiltinSymbol.BLANK)) for k in range(min_idx, max_idx + 1))
             
-            report.append(f"Tape {i + 1}: {content.strip("_")}")
+            report.append(f"Tape {i + 1}: {content.strip(self.blank_char)}")
 
         # Join with newlines and print. This goes to DAPStdout -> VS Code Debug Console
         print("\n" + "\n".join(report) + "\n")
 
     def _step_machine(self):
         # Check termination
-        if self.tm._next_instruction is None:
+        if self.tm._next_transition is None:
             self.running = False
             self._print_halt_report()
             self._send_event("terminated")
@@ -172,7 +186,7 @@ class DAPServer:
 
         # Check breakpoints (unless single-stepping)
         if self.step_granularity != "step":
-            current_line = self.tm._next_instruction.line_number
+            current_line = self.tm._next_transition.line_number
             if self.breakpoints.get(current_line, False):
                 self.running = False
                 self._send_event(
@@ -181,14 +195,14 @@ class DAPServer:
                 )
                 return
 
-        # Execute Step (with Error Handling)
+        # Execute step
         try:
             self.tm.step()
             self.steps_count += 1
             has_next = self.tm.peek()
         except Exception as e:
             self.running = False
-            # Print error to Debug Console (red)
+            # Print error to debug console
             sys.stderr.write(f"\nRUNTIME ERROR: {str(e)}\n")
             # Notify VS Code to pause on exception
             self._send_event("stopped", {
@@ -199,7 +213,7 @@ class DAPServer:
             })
             return
 
-        # Handle Step Pause
+        # Handle step pause
         if self.step_granularity == "step":
             self.running = False
             self.step_granularity = None
@@ -273,8 +287,8 @@ class DAPServer:
         self._send_response(req, True, {"threads": [{"id": 1, "name": "Main Thread"}]})
 
     def handle_stackTrace(self, req):
-        if self.tm._next_instruction:
-            line = self.tm._next_instruction.line_number
+        if self.tm._next_transition:
+            line = self.tm._next_transition.line_number
             name = f"State: {self.tm.state.name}"
         else:
             line = 0
@@ -303,7 +317,6 @@ class DAPServer:
         )
 
     def handle_scopes(self, req):
-        # Unified scope "Machine State"
         self._send_response(
             req,
             True,
@@ -321,7 +334,7 @@ class DAPServer:
     def handle_variables(self, req):
         vars_list = []
 
-        # Machine Metrics
+        # Machine metrics
         vars_list.append(
             {
                 "name": "Current State",
@@ -349,18 +362,17 @@ class DAPServer:
             }
         )
 
-        # Tape Visualizations
+        # Tape visualizations
         for i, head in enumerate(self.tm.heads):
             center = head.index
             raw_dict = head.tape._tape
 
-            # Using .get() for non-mutating access
             left_ctx = "".join(
-                raw_dict.get(x, BLANK) for x in range(center - 5, center)
+                self._format_cell(raw_dict.get(x, BuiltinSymbol.BLANK)) for x in range(center - 5, center)
             )
-            curr_val = raw_dict.get(center, BLANK)
+            curr_val = self._format_cell(raw_dict.get(center, BuiltinSymbol.BLANK))
             right_ctx = "".join(
-                raw_dict.get(x, BLANK) for x in range(center + 1, center + 6)
+                self._format_cell(raw_dict.get(x, BuiltinSymbol.BLANK)) for x in range(center + 1, center + 6)
             )
 
             tape_display = f"{left_ctx}[{curr_val}]{right_ctx}"

@@ -2,7 +2,7 @@ from pathlib import Path
 import typer
 
 
-def varphi_python_dap(
+def vp2pydap(
     input_file: Path = typer.Argument(
         ...,
         exists=True,
@@ -29,7 +29,7 @@ def varphi_python_dap(
 
 
 def main():
-    typer.run(varphi_python_dap)
+    typer.run(vp2pydap)
 
 
 if __name__ == "__main__":

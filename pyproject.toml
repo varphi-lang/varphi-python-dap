@@ -1,18 +1,20 @@
 [project]
-name = "varphi-python-dap"
-version = "1.0.6"
+name = "vp2pydap"
+version = "3.0.0"
 description = "An implementation of a Varphi-to-DAP-compliant-Python compiler."
 readme = "README.md"
 authors = [
-    { name = "Hassan El-Sheikha", email = "hmelsheikha@gmail.com" }
+    { name = "Varphi", email = "support@varphi-lang.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
-    "varphi-python==2.0.6",
+    "vp2py>=3.0.0",
+    "varphi-devkit>=3.0.0",
+    "typer",
 ]
 
 [project.scripts]
-varphi-python-dap = "varphi_python_dap.cli:main"
+vp2pydap = "vp2pydap.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.9.18,<0.10.0"]
@@ -20,5 +22,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "black>=25.12.0",
+    "black",
+    "pytest",
+    "vermin"
 ]

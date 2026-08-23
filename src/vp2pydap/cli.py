@@ -1,16 +1,18 @@
+import sys
 from pathlib import Path
+from typing import Optional
 import typer
 
 
 def vp2pydap(
-    input_file: Path = typer.Argument(
-        ...,
+    input_file: Optional[Path] = typer.Argument(
+        None,
         exists=True,
         file_okay=True,
         dir_okay=False,
         readable=True,
         resolve_path=True,
-        help="Path to input Varphi source file",
+        help="Path to input Varphi source file. If omitted, reads from standard input.",
     ),
 ):
     """
@@ -22,8 +24,15 @@ def vp2pydap(
     from .compiler import VarphiToPythonDAPCompiler
 
     compiler = VarphiToPythonDAPCompiler()
-    compiler.set_source_path(str(input_file))
-    source_code = input_file.read_text(encoding="utf-8")
+    
+    if input_file:
+        compiler.set_source_path(str(input_file))
+        source_code = input_file.read_text(encoding="utf-8")
+    else:
+        # Fallback to stdin if no file is provided
+        compiler.set_source_path("<stdin>")
+        source_code = sys.stdin.read()
+
     compiled_code = compiler.compile(source_code)
     typer.echo(compiled_code)
 

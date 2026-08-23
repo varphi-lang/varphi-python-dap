@@ -335,7 +335,7 @@ wheels = [
 
 [[package]]
 name = "vp2pydap"
-version = "3.0.0"
+version = "3.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "typer" },

@@ -1,6 +1,6 @@
 [project]
 name = "vp2pydap"
-version = "3.0.2"
+version = "3.0.3"
 description = "An implementation of a Varphi-to-DAP-compliant-Python compiler."
 readme = "README.md"
 authors = [
@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "vp2py>=3.0.0",
-    "varphi-devkit>=3.0.0",
+    "vp2py>=3.0.3",
+    "varphi-devkit>=3.0.1",
     "typer",
 ]
 

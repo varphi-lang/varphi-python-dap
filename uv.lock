@@ -709,20 +709,20 @@ wheels = [
 
 [[package]]
 name = "vp2py"
-version = "3.0.0"
+version = "3.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typer" },
     { name = "varphi-devkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/5f/7dd7f3aa08c864997b6160bb97b10a65ddb145f8fd617dfa62adf8e61ce7/vp2py-3.0.0.tar.gz", hash = "sha256:15ac99e7fea3286b8c7c45c0ec6bb0d9618d520aa1a1b1bbf28939c5f5a5276c", size = 6446, upload-time = "2026-08-23T21:12:05.589Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cc/4b/9264c806c761f05b6c2932aac3b3b433b1dba2719eb5bc5e0916cf064a5a/vp2py-3.0.3.tar.gz", hash = "sha256:b45661e8af557732e744309c6d2e14936f0e378cf89550d81893fc3302ad0b40", size = 6628, upload-time = "2026-08-24T00:11:40.344Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/54/1c44a1da756fab6449d299d077df96605ff67a17f0269351b3048bd3e758/vp2py-3.0.0-py3-none-any.whl", hash = "sha256:56743054b084eb2a18b2d400173ff837ea62c6293fa5c0340bb583fb085c2bd9", size = 9043, upload-time = "2026-08-23T21:12:04.402Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/35/ce7ada2289b645ad75f49138fdc6c89091868be0d3ac8b96ec9c659670d6/vp2py-3.0.3-py3-none-any.whl", hash = "sha256:2ec0f259493e3db8fd5ae5dddffc2ff33227976de29f9449f8edd470d10515c6", size = 9219, upload-time = "2026-08-24T00:11:39.339Z" },
 ]
 
 [[package]]
 name = "vp2pydap"
-version = "3.0.2"
+version = "3.0.3"
 source = { editable = "." }
 dependencies = [
     { name = "typer" },
@@ -743,8 +743,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "typer" },
-    { name = "varphi-devkit", specifier = ">=3.0.0" },
-    { name = "vp2py", specifier = ">=3.0.0" },
+    { name = "varphi-devkit", specifier = ">=3.0.1" },
+    { name = "vp2py", specifier = ">=3.0.3" },
 ]
 
 [package.metadata.requires-dev]

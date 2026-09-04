@@ -1,6 +1,6 @@
 [project]
 name = "vp2pydap"
-version = "4.0.0"
+version = "4.0.1"
 description = "An implementation of a Varphi-to-DAP-compliant-Python compiler."
 readme = "README.md"
 authors = [
